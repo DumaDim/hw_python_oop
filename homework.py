@@ -33,7 +33,7 @@ class Training:
                  weight: float,
                  ) -> None:
         self.action = action
-        self.duration = duration
+        self.duration_h = duration
         self.weight = weight
 
     def get_distance(self) -> float:
@@ -42,15 +42,15 @@ class Training:
 
     def get_mean_speed(self) -> float:
         """Получить среднюю скорость движения."""
-        return Training.get_distance(self) / self.duration
+        return Training.get_distance(self) / self.duration_h
 
     def get_spent_calories(self) -> float:
         """Получить количество затраченных калорий."""
-        pass
+        raise NotImplementedError
 
     def show_training_info(self) -> InfoMessage:
         """Вернуть информационное сообщение о выполненной тренировке."""
-        return InfoMessage(self.__class__.__name__, self.duration,
+        return InfoMessage(type(self).__name__, self.duration_h,
                            self.get_distance(), self.get_mean_speed(),
                            self.get_spent_calories())
 
@@ -60,6 +60,9 @@ class Running(Training):
 
     LEN_STEP: float = 0.65
     M_IN_KM: int = 1000
+    COEFF_CALORIE_1: int = 18
+    COEFF_CALORIE_2: int = 20
+    H_IN_MIN: int = 60
 
     def __init__(self,
                  action: int,
@@ -70,15 +73,18 @@ class Running(Training):
 
     def get_spent_calories(self) -> float:
         """Получить количество затраченных калорий."""
-        coeff_calorie_1 = 18
-        coeff_calorie_2 = 20
-        return (coeff_calorie_1 * Training.get_mean_speed(self)
-                - coeff_calorie_2) * self.weight / self.M_IN_KM * (
-                    self.duration * 60)
+        return (self.COEFF_CALORIE_1 * Training.get_mean_speed(self)
+                - self.COEFF_CALORIE_2) * self.weight / self.M_IN_KM * (
+                    self.duration_h * self.H_IN_MIN)
 
 
 class SportsWalking(Training):
     """Тренировка: спортивная ходьба."""
+
+    COEFF_CALORIE_3: float = 0.035
+    COEFF_CALORIE_4: float = 0.029
+    H_IN_MIN: int = 60
+
     def __init__(self,
                  action: int,
                  duration: float,
@@ -90,18 +96,18 @@ class SportsWalking(Training):
 
     def get_spent_calories(self) -> float:
         """Получить количество затраченных калорий."""
-        coeff_calorie_3 = 0.035
-        coeff_calorie_4 = 0.029
-        return (coeff_calorie_3 * self.weight + (
+        return (self.COEFF_CALORIE_3 * self.weight + (
                 Training.get_mean_speed(self)**2
-                // self.height) * coeff_calorie_4 * self.weight
-                ) * (self.duration * 60)
+                // self.height) * self.COEFF_CALORIE_4 * self.weight
+                ) * (self.duration_h * self.H_IN_MIN)
 
 
 class Swimming(Training):
     """Тренировка: плавание."""
 
     LEN_STEP: float = 1.38
+    COEFF_CALORIE_5: float = 1.1
+    COEFF_CALORIE_6: int = 2
 
     def __init__(self,
                  action: int,
@@ -118,14 +124,12 @@ class Swimming(Training):
         """Получить среднюю скорость движения."""
         return (self.length_pool
                 * self.count_pool
-                / self.M_IN_KM / self.duration)
+                / self.M_IN_KM / self.duration_h)
 
     def get_spent_calories(self) -> float:
         """Получить количество затраченных калорий."""
-        coeff_calorie_5 = 1.1
-        coeff_calorie_6 = 2
         return (Swimming.get_mean_speed(self)
-                + coeff_calorie_5) * coeff_calorie_6 * self.weight
+                + self.COEFF_CALORIE_5) * self.COEFF_CALORIE_6 * self.weight
 
 
 def read_package(workout_type: str, data: list) -> Training:
@@ -133,7 +137,10 @@ def read_package(workout_type: str, data: list) -> Training:
     type_training = {'SWM': Swimming,
                      'RUN': Running,
                      'WLK': SportsWalking}
-    return type_training[workout_type](*data)
+    if workout_type not in type_training:
+        return "Неизвестная тренировка"
+    else:
+        return type_training[workout_type](*data)
 
 
 def main(training: Training) -> None:
